@@ -1,0 +1,10 @@
+flask==2.0.1
+Werkzeug==2.0.1
+click==8.0.1
+itsdangerous==2.0.1
+Jinja2==3.0.1
+MarkupSafe==2.0.1
+tensorflow>=2.10.0 # Using full TensorFlow, specify a version compatible with Python 3.10
+opencv-python==4.9.0.80
+numpy~=1.23.0 # Version compatible with recent TensorFlow and Python 3.10 
+gunicorn==21.2.0 # For production server on Railway

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Classification (Server-Side)</title>
+    <!-- Removed TensorFlow.js imports -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .upload-box {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .upload-box:hover {
+            border-color: #666;
+        }
+        #preview {
+            max-width: 300px;
+            max-height: 300px;
+            margin: 20px auto;
+            display: none;
+            border: 1px solid #ddd;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            font-style: italic;
+        }
+        /* Removed model-loading-status as model loads on server */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Classification (Server-Side)</h1>
+        <div class="upload-section">
+            <div class="upload-box" onclick="document.getElementById('file-input').click()">
+                <p>Click to upload an image or drag and drop</p>
+                <input type="file" id="file-input" accept="image/*" style="display: none">
+            </div>
+            <img id="preview" alt="Preview">
+            <div id="loading">Processing...</div>
+            <button onclick="uploadImage()" id="submit-btn" style="display: none;">Analyze Image</button>
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const previewImage = document.getElementById('preview');
+        const submitBtn = document.getElementById('submit-btn');
+        const loadingDiv = document.getElementById('loading');
+        const resultDiv = document.getElementById('result');
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    previewImage.src = event.target.result;
+                    previewImage.style.display = 'block';
+                    submitBtn.style.display = 'inline-block'; // Show button once image is selected
+                    resultDiv.style.display = 'none'; // Hide previous result
+                }
+                reader.readAsDataURL(file);
+            } else {
+                previewImage.style.display = 'none';
+                submitBtn.style.display = 'none';
+            }
+        });
+
+        async function uploadImage() {
+            const file = fileInput.files[0];
+            if (!file) {
+                showResult('Please select an image first.', false);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            loadingDiv.style.display = 'block';
+            submitBtn.style.display = 'none'; // Hide button during processing
+            resultDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showResult(`Prediction: ${data.prediction}`, true);
+                } else {
+                    showResult(data.error || 'An unknown error occurred.', false);
+                }
+            } catch (error) {
+                console.error("Fetch error:", error);
+                showResult('An error occurred during processing. Check console.', false);
+            } finally {
+                loadingDiv.style.display = 'none';
+                submitBtn.style.display = 'inline-block'; // Show button again
+            }
+        }
+
+        function showResult(message, isSuccess) {
+            resultDiv.textContent = message;
+            resultDiv.className = isSuccess ? 'success' : 'error';
+            resultDiv.style.display = 'block';
+        }
+
+        // Drag and drop functionality
+        const uploadBox = document.querySelector('.upload-box');
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadBox.addEventListener(eventName, preventDefaults, false);
+        });
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadBox.addEventListener(eventName, () => uploadBox.style.borderColor = '#007bff', false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadBox.addEventListener(eventName, () => uploadBox.style.borderColor = '#ccc', false);
+        });
+        uploadBox.addEventListener('drop', handleDrop, false);
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+            }
+        }
+    </script>
+</body>
+</html> 
